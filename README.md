@@ -6,24 +6,33 @@ I have a complex Gluon Mobile application I can't share that I was previously bu
 
 This application was created using the Gluon Mobile Eclipse plugin (single view project). The versions of the various dependencies and plugins have been updated to their latest versions. I also added storage permissions to `AndroidManifest.xml`. The temporary file creation happens in `GluonApplication`'s constructor.
 
-I am building with [Gluon GraalVM 22.0.0.3](https://github.com/gluonhq/graal/releases/tag/gluon-22.0.0.3-Final), the JDK 17 version, on both Windows and Linux.
+I have tried building with various versions of GraalVM 22:
+* Oracle GraalVM CE 22.0.0.2 JDK 11
+* Oracle GraalVM CE 22.0.0.2 JDK 17
+* Gluon GraalVM 22.0.0.3 JDK 11
+* Gluon GraalVM 22.0.0.3 JDK 17
+
+The JDK 11 versions work. The JDK 17 versions do not. This has been reproduced on phones running Android 10, 11, and 12.
+
 
 ## Reproducing the issue
-This is a maven project, so in Linux to run do this:
+This is a maven project, so in Linux (I used an Ubuntu 20.04 VM) to run do this:
 
 ```
 mvn -Pandroid gluonfx:build gluonfx:package gluonfx:install gluonfx:nativerun
 ```
 
-or on Windows from a VS Native x64-bit Prompt do this:
+The temp file is created during `GluonApplication`'s constructor and a message is printed with the result.
+
+It appears to work with the JDK 11 versions of GraalVM 22 (both Oracle's and Gluon's), but not with the JDK 17 versions of either.
+
+When it works it looks like this (buried among all the output):
 
 ```
-mvn gluonfx:build gluonfx:nativerun
+[Tue. Feb. 08 14:34:16 EST 2022][INFO] [SUB] D/GraalCompiled(11718): Created temp file at: /data/user/0/com.gluonapplication.gluonmobilesingleviewproject/9221306799863213037.tmp
 ```
 
-The temp file is created during construction and a message is printed with the result.
-
-On Windows 10 it works. On Android it fails and prints an exception stack trace:
+When it fails it looks like this:
 
 ```
 [Tue. Feb. 08 13:39:45 EST 2022][INFO] [SUB] D/GraalCompiled( 5369): Failed to create temp file
@@ -48,3 +57,5 @@ On Windows 10 it works. On Android it fails and prints an exception stack trace:
 [Tue. Feb. 08 13:39:45 EST 2022][INFO] [SUB] D/GraalCompiled( 5369): 	at com.oracle.svm.core.thread.JavaThreads.threadStartRoutine(JavaThreads.java:597)
 [Tue. Feb. 08 13:39:45 EST 2022][INFO] [SUB] D/GraalCompiled( 5369): 	at com.oracle.svm.core.posix.thread.PosixJavaThreads.pthreadStartRoutine(PosixJavaThreads.java:194)
 ```
+
+One potentially suspicious element is that the path it reports when it fails is completely different (in `/tmp` instead of `/data/user/0/com.gluonapplication.gluonmobilesingleviewproject`).
